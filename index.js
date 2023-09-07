@@ -8,6 +8,7 @@ const {
   GraphQLInt,
   GraphQLList,
 } = require("graphql");
+const jwt = require("jsonwebtoken");
 //* INSTANCIAR O EXPRESS
 const app = express();
 //* DADOS SIMULADOS
@@ -24,6 +25,24 @@ const books = [
   { id: 6, title: "The Return of the King", authorId: 2 },
 ];
 //* AUTENTICAÇÃO
+const secretKey = "secret";
+
+function verifyToken(req, res, next) {
+  let token = req.headers.authorization;
+  if (!token) {
+    return res.status(401).json({ message: "No token provided" });
+  }
+  token = token.slice(7);
+  jwt.verify(token, secretKey, (err, decoded) => {
+    if (err) {
+      console.log(err);
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+    console.log(decoded);
+    req.user = decoded;
+    next();
+  });
+}
 
 //* DEFINIR TIPOS DO GRAPHQL
 const AuthorType = new GraphQLObjectType({
@@ -85,6 +104,7 @@ const schema = new GraphQLSchema({
 });
 app.use(
   "/graphql",
+  verifyToken,
   graphqlHTTP({
     graphiql: true,
     schema: schema,
